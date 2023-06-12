@@ -1,0 +1,671 @@
+============ RANCANGAN DATABASE DAN TABEL ==================
+-- Membuat tabel jenis beasiswa
+DROP TABLE IF EXISTS jenis_beasiswa;
+CREATE TABLE jenis_beasiswa (
+id int PRIMARY KEY AUTO_INCREMENT,
+nama_jenis VARCHAR(50),
+keterangan VARCHAR(100)
+);
+ 
+-- Membuat tabel beasiswa
+DROP TABLE IF EXISTS beasiswa;
+CREATE TABLE beasiswa (
+id int PRIMARY KEY AUTO_INCREMENT,
+nama_beasiswa VARCHAR(50),
+tanggal_mulai DATE,
+tanggal_selesai DATE,
+jenis_id int
+);
+ 
+-- Membuat tabel persyaratan
+DROP TABLE IF EXISTS persyaratan;
+CREATE TABLE persyaratan (
+id int PRIMARY KEY AUTO_INCREMENT,
+nama_persyaratan VARCHAR(100),
+keterangan VARCHAR(180)
+);
+ 
+-- Membuat tabel persyaratan_beasiswa
+DROP TABLE IF EXISTS persyaratan_beasiswa;
+CREATE TABLE persyaratan_beasiswa (
+id INT PRIMARY KEY AUTO_INCREMENT,
+beasiswa_id int,
+persyaratan_id int
+);
+ 
+-- Membuat tabel prodi
+DROP TABLE IF EXISTS prodi;
+CREATE TABLE prodi (
+id int PRIMARY KEY AUTO_INCREMENT,
+nama_prodi VARCHAR(160)
+);
+ 
+-- Membuat tabel pendaftaran_pengguna
+DROP TABLE IF EXISTS pendaftaran_pengguna;
+CREATE TABLE pendaftaran_pengguna(
+id int PRIMARY KEY AUTO_INCREMENT,
+no_pendaftaran VARCHAR(20),
+nama_lengkap VARCHAR(75),
+no_handphone VARCHAR(15),
+bukti_daftar VARCHAR(255),
+prodi_id int,
+keterangan ENUM('Belum Diverifikasi', 'Sudah Diverifikasi')
+);
+ 
+-- Membuat tabel pengajuan_beasiswa
+DROP TABLE IF EXISTS pengajuan_beasiswa;
+CREATE TABLE pengajuan_beasiswa(
+id VARCHAR(64) PRIMARY KEY,
+tanggal_pengajuan DATE,
+pengguna_id INT,
+beasiswa_id INT,
+keterangan ENUM('Diajukan', 'Ditolak', 'Diusulkan', 'Ditetapkan') DEFAULT 'Diajukan'
+);
+ 
+-- Membuat tabel persyaratan_pengajuan
+DROP TABLE IF EXISTS persyaratan_pengajuan;
+CREATE TABLE persyaratan_pengajuan(
+id INT PRIMARY KEY AUTO_INCREMENT,
+pengajuan_id INT,
+persyaratan_id INT,
+tanggal_upload TIMESTAMP,
+nama_file VARCHAR(255),
+keterangan VARCHAR(100)
+);
+ 
+-- Membuat tabel pengguna
+DROP TABLE IF EXISTS pengguna;
+CREATE TABLE pengguna(
+id int PRIMARY KEY AUTO_INCREMENT,
+username VARCHAR(50),
+PASSWORD VARCHAR(255),
+peran ENUM('ADMIN', 'USER', 'OPERATOR'),
+login_terakhir TIMESTAMP,
+pendaftaran_id int
+);
+ 
+============ CONTROLLER jenis.php ==================
+ 
+<?php
+defined('BASEPATH') or exit('No direct script access allowed');
+ 
+class Jenis extends CI_Controller
+{
+    function __construct()
+    {
+        parent::__construct();
+        $this->load->model('JenisModel');
+    }
+ 
+    public function index()
+    {
+        $data['title'] = "Dashboard | SIMDAWA-APP";
+        $data['jenis'] = $this->JenisModel->get_jenis();
+        $this->load->view('template/header', $data);
+        $this->load->view('template/sidebar');
+        $this->load->view('jenis/jenis_read', $data);
+        $this->load->view('template/footer');
+    }
+ 
+    public function tambah()
+    {
+        if (isset($_POST['create'])) {
+            $this->JenisModel->insert_jenis();
+            redirect('jenis');
+        } else {
+            $data['title'] = "Tambah Data Jenis Beasiswa | SIMDAWA-APP";
+            $this->load->view('template/header', $data);
+            $this->load->view('template/sidebar');
+            $this->load->view('jenis/jenis_create');
+            $this->load->view('template/footer');
+        }
+    }
+ 
+    public function ubah($id)
+    {
+        if (isset($_POST['update'])) {
+            $this->JenisModel->update_jenis();
+            redirect('jenis');
+        } else {
+            $data['title'] = "Tambah Data Jenis Beasiswa | SIMDAWA-APP";
+            $data['jenis'] = $this->JenisModel->get_jenis_byid($id);
+            $this->load->view('template/header', $data);
+            $this->load->view('template/sidebar');
+            $this->load->view('jenis/jenis_update', $data);
+            $this->load->view('template/footer');
+        }
+    }
+}
+ 
+============ MODEL jenismodel.php ==================
+ 
+<?php
+defined('BASEPATH') or exit('No direct script access allowed');
+class JenisModel extends CI_Model
+{
+    private $tabel = "jenis_beasiswa";
+ 
+    public function get_jenis()
+    {
+        return $this->db->get($this->tabel)->result();
+        //baris 9 ini tujuannya untuk mengambil data dari tabel jenis_beasiswa. selain dengan fungsi get,
+        //kita juga bisa menggunakan $this->db—>query('select * from jenis_beasiswa')->result();
+    }
+ 
+    public function insert_jenis()
+    {
+        $data = [
+            'nama_jenis' => $this->input->post('nama_jenis'),
+            'keterangan' => $this->input->post('keterangan')
+        ];
+        //nama_jenis sebelah kiri, sesuaikan dengan nama kolom di tabel
+        //nama_jenis sebelah kanan, sesuaikan dengan name di form yaitu (jenis_create.php baris 29)
+        $this->db->insert($this->tabel, $data);
+    }
+ 
+    //function dengan 1 parameter. $id nilainya dikirimkan oleh controller
+    public function get_jenis_byid($id)
+    {
+        return $this->db->get_where($this->tabel, ['id' => $id])->row();
+        /*
+        get_where hampir sama seperti get, bedanya ada tambahan klause where untuk menampilkan data berdasarkan kriteria tertentu. 'id'=>$id artinya data yang diambil adalah data jenis_beasiswa dengan nilai id = $id. row() digunakan untuk mengambil satu baris data, beda dengan result() yang mengambil semua data
+        */
+    }
+ 
+    public function update_jenis()
+    {
+        $data = [
+            'nama_jenis' => $this->input->post('nama_jenis'),
+            'keterangan' => $this->input->post('keterangan')
+        ];
+        $this->db->where('id', $this->input->post('id'));
+        $this->db->update($this->tabel, $data);
+        /* proses update hampir sama seperti insert, bedanya, ada tambahan where (baris 39) untuk menentukan data mana yang akan diperbaharui */
+    }
+}
+ 
+============ VIEW jenis_read.php ==================
+ 
+<div class="dashboard-wrapper">
+    <div class="container-fluid dashboard-content">
+        <div class="row">
+            <div class="col-xl-12 col-lg-l2 col-md-12 col-sm-12 col-12">
+                <div class="page-header">
+                    <h2 class="pageheader-title">Data Jenis Beasiswa</h2>
+                    <div class="page-breadcrumb">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="<?php echo base_url('home') ?>" class="breadcrumb-link">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="<?php echo base_url('jenis') ?>" class="breadcrumb-link">Jenis Beasiswa</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Data Jenis Beasiswa</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                <div class="card">
+                    <div class="card-header">Data Jenis Beasiswa
+                        <a href="<?php echo base_url('jenis/tambah') ?>" class="btn btn-sm btn-success float-right"><i class="fas fa-plus"></i>Tambah Data</a>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered" id="mytabel">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Jenis Beasiswa</th>
+                                    <th>Keterangan</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $no = 1;
+                                foreach ($jenis as $a) {
+                                    echo "<tr><td>" . $no++ . "</td>
+                                    <td>" . $a->nama_jenis . "</td>
+                                    <td>" . $a->keterangan . "</td>
+                                    <td><a href=" . base_url('jenis/ubah' . $a->id) . " class='btn btn-sm btn-info'><i class='fas fa-edit'></i> Ubah</a>
+                                                <a href=" . base_url('jenis/hapus' . $a->id) . " onclick='return confirm(\"ingin hapus data ini?\")' class='btn btn-sm btn-danger'><i class='fas fa-trash'></i> Hapus</a>
+                                    </td></tr>";
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+ 
+============ VIEW jenis_create.php ==================
+ 
+<div class="dashboard-wrapper">
+    <div class="container-fluid dashboard-content">
+        <div class="row">
+            <div class="col-xl-12 col-lg-l2 col-md-12 col-sm-12 col-12">
+                <div class="page-header">
+                    <h2 class="pageheader-title">Tambah Data Jenis Beasiswa</h2>
+                    <div class="page-breadcrumb">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="<?php echo base_url('home') ?>" class="breadcrumb-link">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="<?php echo base_url('jenis') ?>" class="breadcrumb-link">Jenis Beasiswa</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Tambah Data</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                <div class="card">
+                    <div class="card-header">Tambah Data Jenis Beasiswa</div>
+                    <div class="card-body">
+                        <form action="" method="post">
+                            <div class="form-group row">
+                                <label for="nama_jenis" class="col-md-2">Nama Jenis Beasiswa</label>
+                                <div class="col-md-10">
+                                    <input type="text" name="nama_jenis" required placeholder="Nama Jenis Beasiswa" class="form-control">
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="keterangan" class="col-md-2">Keterangan</label>
+                                <div class="col-md-10"><input type="text" name="keterangan" required placeholder="Keterangan" class="form-control">
+                                </div>
+                            </div>
+                            <a href="<?= base_url('jenis') ?>" class="btn btn-sm btn-danger float-right"> Batal</a>
+                            <button type="submit" name="create" class="btn btn-sm btn-info float-right mr-1"> Simpan</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+============ VIEW jenis_update.php ==================
+ 
+<div class="dashboard-wrapper">
+    <div class="container-fluid dashboard-content">
+        <div class="row">
+            <div class="col-xl-12 col-lg-l2 col-md-12 col-sm-12 col-12">
+                <div class="page-header">
+                    <h2 class="pageheader-title">Perbaharui Data Jenis Beasiswa</h2>
+                    <div class="page-breadcrumb">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="<?php echo base_url('home') ?>" class="breadcrumb-link">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="<?php echo base_url('jenis') ?>" class="breadcrumb-link">Jenis Beasiswa</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Perbaharui Data</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                <div class="card">
+                    <div class="card-header">Perbaharui Data Jenis Beasiswa</div>
+                    <div class="card-body">
+                        <form action="" method="post">
+                            <input type="hidden" name="id" value="<?= $jenis->id ?>">
+                            <div class="form-group row">
+                                <label for="nama_jenis" class="col-md-2">Nama Jenis Beasiswa</label>
+                                <div class="col-md-10">
+                                    <input type="text" name="nama_jenis" required placeholder="Nama Jenis Beasiswa" value="<?= $jenis->nama_jenis ?>" class=" form-control">
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="keterangan" class="col-md-2">Keterangan</label>
+                                <div class="col-md-10"><input type="text" name="keterangan" required placeholder="Keterangan" value="<?= $jenis->keterangan ?>" class="form-control">
+                                </div>
+                            </div>
+                            <a href="<?= base_url('jenis') ?>" class="btn btn-sm btn-danger float-right"> Batal</a>
+                            <button type="submit" name="update" class="btn btn-sm btn-info float-right mr-1"> Simpan</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+============ RANCANGAN DATABASE DAN TABEL ==================
+-- Membuat tabel jenis beasiswa
+DROP TABLE IF EXISTS jenis_beasiswa;
+CREATE TABLE jenis_beasiswa (
+id int PRIMARY KEY AUTO_INCREMENT,
+nama_jenis VARCHAR(50),
+keterangan VARCHAR(100)
+);
+ 
+-- Membuat tabel beasiswa
+DROP TABLE IF EXISTS beasiswa;
+CREATE TABLE beasiswa (
+id int PRIMARY KEY AUTO_INCREMENT,
+nama_beasiswa VARCHAR(50),
+tanggal_mulai DATE,
+tanggal_selesai DATE,
+jenis_id int
+);
+ 
+-- Membuat tabel persyaratan
+DROP TABLE IF EXISTS persyaratan;
+CREATE TABLE persyaratan (
+id int PRIMARY KEY AUTO_INCREMENT,
+nama_persyaratan VARCHAR(100),
+keterangan VARCHAR(180)
+);
+ 
+-- Membuat tabel persyaratan_beasiswa
+DROP TABLE IF EXISTS persyaratan_beasiswa;
+CREATE TABLE persyaratan_beasiswa (
+id INT PRIMARY KEY AUTO_INCREMENT,
+beasiswa_id int,
+persyaratan_id int
+);
+ 
+-- Membuat tabel prodi
+DROP TABLE IF EXISTS prodi;
+CREATE TABLE prodi (
+id int PRIMARY KEY AUTO_INCREMENT,
+nama_prodi VARCHAR(160)
+);
+ 
+-- Membuat tabel pendaftaran_pengguna
+DROP TABLE IF EXISTS pendaftaran_pengguna;
+CREATE TABLE pendaftaran_pengguna(
+id int PRIMARY KEY AUTO_INCREMENT,
+no_pendaftaran VARCHAR(20),
+nama_lengkap VARCHAR(75),
+no_handphone VARCHAR(15),
+bukti_daftar VARCHAR(255),
+prodi_id int,
+keterangan ENUM('Belum Diverifikasi', 'Sudah Diverifikasi')
+);
+ 
+-- Membuat tabel pengajuan_beasiswa
+DROP TABLE IF EXISTS pengajuan_beasiswa;
+CREATE TABLE pengajuan_beasiswa(
+id VARCHAR(64) PRIMARY KEY,
+tanggal_pengajuan DATE,
+pengguna_id INT,
+beasiswa_id INT,
+keterangan ENUM('Diajukan', 'Ditolak', 'Diusulkan', 'Ditetapkan') DEFAULT 'Diajukan'
+);
+ 
+-- Membuat tabel persyaratan_pengajuan
+DROP TABLE IF EXISTS persyaratan_pengajuan;
+CREATE TABLE persyaratan_pengajuan(
+id INT PRIMARY KEY AUTO_INCREMENT,
+pengajuan_id INT,
+persyaratan_id INT,
+tanggal_upload TIMESTAMP,
+nama_file VARCHAR(255),
+keterangan VARCHAR(100)
+);
+ 
+-- Membuat tabel pengguna
+DROP TABLE IF EXISTS pengguna;
+CREATE TABLE pengguna(
+id int PRIMARY KEY AUTO_INCREMENT,
+username VARCHAR(50),
+PASSWORD VARCHAR(255),
+peran ENUM('ADMIN', 'USER', 'OPERATOR'),
+login_terakhir TIMESTAMP,
+pendaftaran_id int
+);
+ 
+============ CONTROLLER jenis.php ==================
+ 
+<?php
+defined('BASEPATH') or exit('No direct script access allowed');
+ 
+class Jenis extends CI_Controller
+{
+    function __construct()
+    {
+        parent::__construct();
+        $this->load->model('JenisModel');
+    }
+ 
+    public function index()
+    {
+        $data['title'] = "Dashboard | SIMDAWA-APP";
+        $data['jenis'] = $this->JenisModel->get_jenis();
+        $this->load->view('template/header', $data);
+        $this->load->view('template/sidebar');
+        $this->load->view('jenis/jenis_read', $data);
+        $this->load->view('template/footer');
+    }
+ 
+    public function tambah()
+    {
+        if (isset($_POST['create'])) {
+            $this->JenisModel->insert_jenis();
+            redirect('jenis');
+        } else {
+            $data['title'] = "Tambah Data Jenis Beasiswa | SIMDAWA-APP";
+            $this->load->view('template/header', $data);
+            $this->load->view('template/sidebar');
+            $this->load->view('jenis/jenis_create');
+            $this->load->view('template/footer');
+        }
+    }
+ 
+    public function ubah($id)
+    {
+        if (isset($_POST['update'])) {
+            $this->JenisModel->update_jenis();
+            redirect('jenis');
+        } else {
+            $data['title'] = "Tambah Data Jenis Beasiswa | SIMDAWA-APP";
+            $data['jenis'] = $this->JenisModel->get_jenis_byid($id);
+            $this->load->view('template/header', $data);
+            $this->load->view('template/sidebar');
+            $this->load->view('jenis/jenis_update', $data);
+            $this->load->view('template/footer');
+        }
+    }
+}
+ 
+============ MODEL jenismodel.php ==================
+ 
+<?php
+defined('BASEPATH') or exit('No direct script access allowed');
+class JenisModel extends CI_Model
+{
+    private $tabel = "jenis_beasiswa";
+ 
+    public function get_jenis()
+    {
+        return $this->db->get($this->tabel)->result();
+        //baris 9 ini tujuannya untuk mengambil data dari tabel jenis_beasiswa. selain dengan fungsi get,
+        //kita juga bisa menggunakan $this->db—>query('select * from jenis_beasiswa')->result();
+    }
+ 
+    public function insert_jenis()
+    {
+        $data = [
+            'nama_jenis' => $this->input->post('nama_jenis'),
+            'keterangan' => $this->input->post('keterangan')
+        ];
+        //nama_jenis sebelah kiri, sesuaikan dengan nama kolom di tabel
+        //nama_jenis sebelah kanan, sesuaikan dengan name di form yaitu (jenis_create.php baris 29)
+        $this->db->insert($this->tabel, $data);
+    }
+ 
+    //function dengan 1 parameter. $id nilainya dikirimkan oleh controller
+    public function get_jenis_byid($id)
+    {
+        return $this->db->get_where($this->tabel, ['id' => $id])->row();
+        /*
+        get_where hampir sama seperti get, bedanya ada tambahan klause where untuk menampilkan data berdasarkan kriteria tertentu. 'id'=>$id artinya data yang diambil adalah data jenis_beasiswa dengan nilai id = $id. row() digunakan untuk mengambil satu baris data, beda dengan result() yang mengambil semua data
+        */
+    }
+ 
+    public function update_jenis()
+    {
+        $data = [
+            'nama_jenis' => $this->input->post('nama_jenis'),
+            'keterangan' => $this->input->post('keterangan')
+        ];
+        $this->db->where('id', $this->input->post('id'));
+        $this->db->update($this->tabel, $data);
+        /* proses update hampir sama seperti insert, bedanya, ada tambahan where (baris 39) untuk menentukan data mana yang akan diperbaharui */
+    }
+}
+ 
+============ VIEW jenis_read.php ==================
+ 
+<div class="dashboard-wrapper">
+    <div class="container-fluid dashboard-content">
+        <div class="row">
+            <div class="col-xl-12 col-lg-l2 col-md-12 col-sm-12 col-12">
+                <div class="page-header">
+                    <h2 class="pageheader-title">Data Jenis Beasiswa</h2>
+                    <div class="page-breadcrumb">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="<?php echo base_url('home') ?>" class="breadcrumb-link">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="<?php echo base_url('jenis') ?>" class="breadcrumb-link">Jenis Beasiswa</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Data Jenis Beasiswa</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                <div class="card">
+                    <div class="card-header">Data Jenis Beasiswa
+                        <a href="<?php echo base_url('jenis/tambah') ?>" class="btn btn-sm btn-success float-right"><i class="fas fa-plus"></i>Tambah Data</a>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered" id="mytabel">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Jenis Beasiswa</th>
+                                    <th>Keterangan</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $no = 1;
+                                foreach ($jenis as $a) {
+                                    echo "<tr><td>" . $no++ . "</td>
+                                    <td>" . $a->nama_jenis . "</td>
+                                    <td>" . $a->keterangan . "</td>
+                                    <td><a href=" . base_url('jenis/ubah' . $a->id) . " class='btn btn-sm btn-info'><i class='fas fa-edit'></i> Ubah</a>
+                                                <a href=" . base_url('jenis/hapus' . $a->id) . " onclick='return confirm(\"ingin hapus data ini?\")' class='btn btn-sm btn-danger'><i class='fas fa-trash'></i> Hapus</a>
+                                    </td></tr>";
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+ 
+============ VIEW jenis_create.php ==================
+ 
+<div class="dashboard-wrapper">
+    <div class="container-fluid dashboard-content">
+        <div class="row">
+            <div class="col-xl-12 col-lg-l2 col-md-12 col-sm-12 col-12">
+                <div class="page-header">
+                    <h2 class="pageheader-title">Tambah Data Jenis Beasiswa</h2>
+                    <div class="page-breadcrumb">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="<?php echo base_url('home') ?>" class="breadcrumb-link">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="<?php echo base_url('jenis') ?>" class="breadcrumb-link">Jenis Beasiswa</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Tambah Data</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                <div class="card">
+                    <div class="card-header">Tambah Data Jenis Beasiswa</div>
+                    <div class="card-body">
+                        <form action="" method="post">
+                            <div class="form-group row">
+                                <label for="nama_jenis" class="col-md-2">Nama Jenis Beasiswa</label>
+                                <div class="col-md-10">
+                                    <input type="text" name="nama_jenis" required placeholder="Nama Jenis Beasiswa" class="form-control">
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="keterangan" class="col-md-2">Keterangan</label>
+                                <div class="col-md-10"><input type="text" name="keterangan" required placeholder="Keterangan" class="form-control">
+                                </div>
+                            </div>
+                            <a href="<?= base_url('jenis') ?>" class="btn btn-sm btn-danger float-right"> Batal</a>
+                            <button type="submit" name="create" class="btn btn-sm btn-info float-right mr-1"> Simpan</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+ 
+============ VIEW jenis_update.php ==================
+ 
+<div class="dashboard-wrapper">
+    <div class="container-fluid dashboard-content">
+        <div class="row">
+            <div class="col-xl-12 col-lg-l2 col-md-12 col-sm-12 col-12">
+                <div class="page-header">
+                    <h2 class="pageheader-title">Perbaharui Data Jenis Beasiswa</h2>
+                    <div class="page-breadcrumb">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="<?php echo base_url('home') ?>" class="breadcrumb-link">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="<?php echo base_url('jenis') ?>" class="breadcrumb-link">Jenis Beasiswa</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Perbaharui Data</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                <div class="card">
+                    <div class="card-header">Perbaharui Data Jenis Beasiswa</div>
+                    <div class="card-body">
+                        <form action="" method="post">
+                            <input type="hidden" name="id" value="<?= $jenis->id ?>">
+                            <div class="form-group row">
+                                <label for="nama_jenis" class="col-md-2">Nama Jenis Beasiswa</label>
+                                <div class="col-md-10">
+                                    <input type="text" name="nama_jenis" required placeholder="Nama Jenis Beasiswa" value="<?= $jenis->nama_jenis ?>" class=" form-control">
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="keterangan" class="col-md-2">Keterangan</label>
+                                <div class="col-md-10"><input type="text" name="keterangan" required placeholder="Keterangan" value="<?= $jenis->keterangan ?>" class="form-control">
+                                </div>
+                            </div>
+                            <a href="<?= base_url('jenis') ?>" class="btn btn-sm btn-danger float-right"> Batal</a>
+                            <button type="submit" name="update" class="btn btn-sm btn-info float-right mr-1"> Simpan</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
